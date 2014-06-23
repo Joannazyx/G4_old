@@ -5,7 +5,7 @@ class Pending extends CI_Controller {
 	public function __construct()
 	{
 		parent::__construct();
-		$this->load->model('pending_model');
+		$this->load->model('Pending_model');
 		$this->load->helper('string');
 		$this->load->model('LogManager');
 	//	$this->load->helper('form');
@@ -227,38 +227,11 @@ class Pending extends CI_Controller {
 	*change 2014.06.17 by ZYX
 	*remove input suspend, default value 0
 	*/
-	public function AddRecord($type, $stockID, $commission_amount, $commission_price,  $commission_time, $stockholderID, $stockaccountID,  $currency,$suspend=0) 
+	public function AddRecord() 
 	{
-
-		$commissionID = random_string('unique', 0);
-		
-		$data = array('CommissionID' => $commissionID,
-					  'StockID' => $stockID,
-					  'StockHolderID' => $stockholderID,
-					  'StockAccountID' => $stockaccountID,
-					  'CommissionPrice' => $commission_price,
-					  'CommissionTime' => $commission_time,
-					  'CommissionAmount' => $commission_amount,
-					  'CommissionType' => '',
-					  'CommissionState' => 'PENDING',
-					  'Suspend' => $suspend,
-					  'Currency' => $currency);
-
-		if($type == 0) {
-			//若为买入指令冻结资金账户
-			$data['CommissionType'] = 'BUY';
-			$state = $this->pending_model->add_buy_pending($data);
-		} else {
-			//若为卖出指令冻结股票账户
-			$data['CommissionType'] = 'SELL';
-			$state = $this->pending_model->add_sell_pending($data);
-		}
-		//writelog
-
-		if($state == TRUE)
-			return $commissionID;
-		else 
-			return 'Add record failed!';
+		$this->Pending_model->AddRecord(0,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,38,59,6,3,2014)), '22222222','1','CNY');
+		$this->Pending_model->AddRecord(0,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,40,59,6,3,2014)), '44444444','1','CNY');
+		$this->Pending_model->AddRecord(1,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,42,59,6,3,2014)), '12345678','1','CNY');
 	}
 
 	/*@author KHC	@version 1.0	

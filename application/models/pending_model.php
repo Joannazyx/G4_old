@@ -4,7 +4,10 @@ class Pending_model extends CI_Model {
 	
 	public function __construct()
 	{
-		$this->load->database();
+		parent::__construct();
+
+		$this->load->model('Funds_Account');
+		$this->load->database('g4');
 	}
 
 	/*@author KHC @version 1.0
@@ -72,6 +75,53 @@ class Pending_model extends CI_Model {
 			return TRUE;
 		}
 	}
+
+
+	/*@author KHC	@version 1.0	
+	 * @parameter $type:买卖类型,$stockID:股票ID， $commission_amount:交易总量, $commission_price:交易价格, $commission_time:交易时间, $stockholderID:交易发起证券账户, $stockaccountID：交易发起资金账户, $suspend:股票是否挂起, $currency交易币种
+	 * @return 正确插入待处理指令表执行返回commissionID订单号，否则返回错误信息*/
+	/*
+	*change 2014.06.17 by ZYX
+	*remove input suspend, default value 0
+	*/
+	public function AddRecord($type, $stockID, $commission_amount, $commission_price,  $commission_time, $stockholderID, $stockaccountID,  $currency,$suspend=0) 
+	{
+
+		$commissionID = random_string('unique', 0);
+		
+		$data = array('CommissionID' => $commissionID,
+					  'StockID' => $stockID,
+					  'StockHolderID' => $stockholderID,
+					  'StockAccountID' => $stockaccountID,
+					  'CommissionPrice' => $commission_price,
+					  'CommissionTime' => $commission_time,
+					  'CommissionAmount' => $commission_amount,
+					  'CommissionType' => '',
+					  'CommissionState' => 'PENDING',
+					  'Suspend' => $suspend,
+					  'Currency' => $currency);
+
+		if($type == 0) {
+			//若为买入指令冻结资金账户
+			$state = false;
+			$freeze = $this->Funds_Account->central_spend_money($commissionID, $stockaccountID, $currency, $commission_amount*$commission_price);
+			//////			
+			$data['CommissionType'] = 'BUY';
+			if($freeze == true)
+				$state = $this->add_buy_pending($data);
+		} else {
+			//若为卖出指令冻结股票账户
+			$data['CommissionType'] = 'SELL';
+			$state = $this->add_sell_pending($data);
+		}
+		//writelog
+
+		if($state == TRUE)
+			return $commissionID;
+		else 
+			return 'Add record failed!';
+	}
+
 
 	/*@author KHC @version 1.0
 	 * @parameter $commissionID:订单号
@@ -161,6 +211,30 @@ class Pending_model extends CI_Model {
 			return TRUE;
 		}
 	}
+
+	
+	/*@author KHC	@version 1.0	
+	 * @parameter $commissionID: 订单号
+	 * @return 根据订单号删除订单，返回执行结果的布尔量*/
+	public function DeleteRecord($commissionID)
+	{
+		$type = $this->get_type($commissionID);
+		
+		if($type == 0) {
+			//若为撤销买入指令解冻资金账户；
+			$state = false;
+			$unfreeze = $this->Funds_Account->$central_unfreeze($commissionID/*$id*/);
+			if($unfreeze == true)   
+				$state = $this->withdraw_buy_pending($commissionID);
+		} else {
+			//若为撤销卖出指令解冻股票账户；
+			$state = $this->withdraw_sell_pending($commissionID);
+		}
+
+		return $state;
+	}
+
+
 
 	/*@author KHC @version 1.0
 	 * @parameter $stockID:待挂起股票号
@@ -264,6 +338,7 @@ class Pending_model extends CI_Model {
 		$logstr = '';
 		$query = $this->db->get('pending_buy_table');
 		foreach ($query->result_array() as $row) {
+			$this->Funds_Account->$central_unfreeze($row['CommissionID']/*$id*/);
 			$this->db->insert('withdraw_request_table',$row);
 			$logstr = $logstr."Time: ".date("M-d-Y h:i:s",mktime()).
 					" State: ".'SHUTDOWN'.					
