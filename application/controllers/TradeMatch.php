@@ -3,7 +3,7 @@
  * TradeMatch控制器，用来处理带匹配指令，将结果告知成功交易模型
  * @author zlq
  * @version 1.0
- */
+ */ob_start();
 class TradeMatch extends CI_Controller {
 	private $pair = NULL;  // 该成交的买卖对
 	private $m_cnt = 0;    // 匹配个数计数
@@ -17,6 +17,7 @@ class TradeMatch extends CI_Controller {
 		date_default_timezone_set("Asia/Shanghai");
 		parent::__construct();
 		$this->load->database();
+		$this->load->model("se_6_stock", "s6");
 		$sql = 'select StockID, StartPrice
 					from data_of_the_day
 				';
@@ -176,10 +177,15 @@ class TradeMatch extends CI_Controller {
 	 * @return true 若检查通过返回
 	 */
 	protected function checkMatchness($Sid, $buyp, $sellp) {
-
-		 $lat = $this->yesterday_end_price[(string)$Sid] * $this->latitude;
-		 if ($buyp < $sellp)
+	// for debug
+	//	 $lat = $this->yesterday_end_price[(string)$Sid] * $this->latitude;
+		if ($buyp < $sellp)
 		 	return false;
+			
+		$limit = $this->s6->getStateInfoById($Sid)[0]->limit_today;
+		if ($limit == -1)
+			return true;
+		$lat = $this->yesterday_end_price[$Sid] * $limit / 100.0;
 		if ($buyp < $this->yesterday_end_price[(string)$Sid] - $lat)
 			return false;
 		if ($sellp > $this->yesterday_end_price[(string)$Sid] + $lat)
@@ -197,7 +203,13 @@ class TradeMatch extends CI_Controller {
 		//echo $Sid;
 		//echo ':';
 		//echo $this->yesterday_end_price[$Sid];
-		$lat = $this->yesterday_end_price[$Sid]*$this->latitude;
+
+		// for debug
+		//	 $lat = $this->yesterday_end_price[$Sid]*$this->latitude;
+		$limit = $this->s6->getStateInfoById($Sid)[0]->limit_today;
+		if ($limit == -1)
+			return $p;
+		$lat =  $this->yesterday_end_price[$Sid] * $limit / 100.0;
 		if ($this->yesterday_end_price[$Sid] - $lat > $p)
 			$p = $this->yesterday_end_price[$Sid] - $lat;
 		if ($this->yesterday_end_price[$Sid] + $lat < $p)
