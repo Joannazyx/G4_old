@@ -126,7 +126,7 @@ class CI_Loader {
 		$this->_ci_ob_level  = ob_get_level();
 		$this->_ci_library_paths = array(APPPATH, BASEPATH);
 		$this->_ci_helper_paths = array(APPPATH, BASEPATH);
-		$paths=array('../G6/application','application/');
+		$paths=array('../G2/application/','../G6/application/','application/');
 		$paths=array_merge(array(APPPATH,),$paths);
 		$paths=array_unique($paths);
 		//$this->_ci_model_paths = array(APPPATH);

@@ -5,9 +5,8 @@ class Pending_model extends CI_Model {
 	public function __construct()
 	{
 		parent::__construct();
-
 		$this->load->model('Funds_Account');
-		$this->load->database('g4');
+		$this->load->database();
 	}
 
 	/*@author KHC @version 1.0
@@ -104,10 +103,11 @@ class Pending_model extends CI_Model {
 		if($type == 0) {
 			//若为买入指令冻结资金账户
 			$state = false;
-			$freeze = $this->Funds_Account->central_spend_money($commissionID, $stockaccountID, $currency, $commission_amount*$commission_price);
+			$freeze = $this->Funds_Account->central_freeze($commissionID, $stockaccountID, $currency, $commission_amount*$commission_price);
 			//////			
 			$data['CommissionType'] = 'BUY';
-			if($freeze == true)
+
+			if($freeze === true)
 				$state = $this->add_buy_pending($data);
 		} else {
 			//若为卖出指令冻结股票账户
@@ -219,12 +219,12 @@ class Pending_model extends CI_Model {
 	public function DeleteRecord($commissionID)
 	{
 		$type = $this->get_type($commissionID);
-		
-		if($type == 0) {
+		if($type === 0) {
 			//若为撤销买入指令解冻资金账户；
+			
 			$state = false;
-			$unfreeze = $this->Funds_Account->$central_unfreeze($commissionID/*$id*/);
-			if($unfreeze == true)   
+			$unfreeze = $this->Funds_Account->central_unfreeze($commissionID);
+			if($unfreeze === true)   
 				$state = $this->withdraw_buy_pending($commissionID);
 		} else {
 			//若为撤销卖出指令解冻股票账户；
@@ -338,7 +338,7 @@ class Pending_model extends CI_Model {
 		$logstr = '';
 		$query = $this->db->get('pending_buy_table');
 		foreach ($query->result_array() as $row) {
-			$this->Funds_Account->$central_unfreeze($row['CommissionID']/*$id*/);
+			$this->Funds_Account->central_unfreeze($row['CommissionID']);	
 			$this->db->insert('withdraw_request_table',$row);
 			$logstr = $logstr."Time: ".date("M-d-Y h:i:s",mktime()).
 					" State: ".'SHUTDOWN'.					

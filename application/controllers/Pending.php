@@ -229,27 +229,18 @@ class Pending extends CI_Controller {
 	*/
 	public function AddRecord() 
 	{
-		$this->Pending_model->AddRecord(0,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,38,59,6,3,2014)), '22222222','1','CNY');
-		$this->Pending_model->AddRecord(0,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,40,59,6,3,2014)), '44444444','1','CNY');
-		$this->Pending_model->AddRecord(1,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,42,59,6,3,2014)), '12345678','1','CNY');
+		$this->Pending_model->AddRecord(0,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,38,59,6,3,2014)), '22222222','5eb8862969ddedadffdefada0f1e7203','CNY');
+		$this->Pending_model->AddRecord(0,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,40,59,6,3,2014)), '44444444','5eb8862969ddedadffdefada0f1e7203','CNY');
+		$this->Pending_model->AddRecord(1,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,42,59,6,3,2014)), '12345678','5eb8862969ddedadffdefada0f1e7203','CNY');
 	}
 
 	/*@author KHC	@version 1.0	
 	 * @parameter $commissionID: 订单号
 	 * @return 根据订单号删除订单，返回执行结果的布尔量*/
-	public function DeleteRecord($commissionID)
+	public function DeleteRecord()
 	{
-		$type = $this->pending_model->get_type($commissionID);
-		
-		if($type == 0) {
-			//若为撤销买入指令解冻资金账户；
-			$state = $this->pending_model->withdraw_buy_pending($commissionID);
-		} else {
-			//若为撤销卖出指令解冻股票账户；
-			$state = $this->pending_model->withdraw_sell_pending($commissionID);
-		}
+		$this->Pending_model->DeleteRecord('aec66045f7b0e9261286b9ffc7a900b3');
 
-		return $state;
 	}
 
 	/*@author KHC	@version 1.0	
@@ -257,7 +248,7 @@ class Pending extends CI_Controller {
 	 * @return 根据股票号挂起股票，返回执行结果的布尔量*/
 	public function SuspendStock($stockID)
 	{
-		return $this->pending_model->suspendPending($stockID);
+		return $this->Pending_model->suspendPending($stockID);
 	}
 
 	/*@author KHC	@version 1.0	
@@ -265,7 +256,7 @@ class Pending extends CI_Controller {
 	 * @return 根据股票号不挂起股票，返回执行结果的布尔量*/
 	public function unSuspendStock($stockID)
 	{
-		return $this->pending_model->unsuspendPending($stockID);	
+		return $this->Pending_model->unsuspendPending($stockID);	
 	}
 
 	/*@author KHC	@version 1.0	
@@ -273,7 +264,7 @@ class Pending extends CI_Controller {
 	 * @return 股市停盘时调用，返回执行结果的布尔值*/
 	public function Shutdown() {
 		//全部撤销解冻
-		return $this->pending_model->shutdownPending();	
+		return $this->Pending_model->shutdownPending();	
 	}		
 }
 
