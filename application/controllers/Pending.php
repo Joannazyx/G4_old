@@ -91,8 +91,8 @@ class Pending extends CI_Controller {
 				$startPrice=array('60.0');
 				$this->database_clear($stockID,$startPrice);
 				
-				$commissionID=$this->AddRecord(0,'11111111',50,60,date('Y-m-d H:i:s', mktime(14,38,59,6,3,2014)), '22222222','33333333','CNY');
-				$this->AddRecord(1,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,40,59,6,3,2014)), '44444444','55555555','CNY');
+				$commissionID=$this->Pending_model->AddRecord(0,'001010',50,60,date('Y-m-d H:i:s', mktime(14,38,59,6,3,2014)), '22222222','33333333','CNY');
+				$this->Pending_model->AddRecord(1,'001010',40,60,date('Y-m-d H:i:s', mktime(14,40,59,6,3,2014)), '44444444','55555555','CNY');
 				echo 'To be deleted '.$commissionID;
 				//echo 'jumping to match';
 				//sleep(10);
@@ -221,7 +221,16 @@ class Pending extends CI_Controller {
 	}
 
 	/*@author KHC	@version 1.0	
-	 * @parameter $type:买卖类型,$stockID:股票ID， $commission_amount:交易总量, $commission_price:交易价格, $commission_time:交易时间, $stockholderID:交易发起证券账户, $stockaccountID：交易发起资金账户, $suspend:股票是否挂起, $currency交易币种
+	 * @parameter 
+	 $type:买卖类型,
+	 $stockID:股票ID，
+	  $commission_amount:交易总量, 
+	  $commission_price:交易价格, 
+	  $commission_time:交易时间, 
+	  $stockholderID:交易发起证券账户, 
+	  $stockaccountID：交易发起资金账户, 
+	  $suspend:股票是否挂起, 
+	  $currency交易币种
 	 * @return 正确插入待处理指令表执行返回commissionID订单号，否则返回错误信息*/
 	/*
 	*change 2014.06.17 by ZYX
@@ -229,9 +238,12 @@ class Pending extends CI_Controller {
 	*/
 	public function AddRecord() 
 	{
-		$this->Pending_model->AddRecord(0,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,38,59,6,3,2014)), '22222222','5eb8862969ddedadffdefada0f1e7203','CNY');
-		$this->Pending_model->AddRecord(0,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,40,59,6,3,2014)), '44444444','5eb8862969ddedadffdefada0f1e7203','CNY');
-		$this->Pending_model->AddRecord(1,'11111111',40,60,date('Y-m-d H:i:s', mktime(14,42,59,6,3,2014)), '12345678','5eb8862969ddedadffdefada0f1e7203','CNY');
+		//$result=$this->Pending_model->AddRecord(0,'001010',40,60,date('Y-m-d H:i:s', mktime(14,38,59,6,3,2014)), '1','5eb8862969ddedadffdefada0f1e7203','CNY');
+		//echo $result."\n";
+		$result=$this->Pending_model->AddRecord(0,'001010',40,60,date('Y-m-d H:i:s', mktime(14,40,59,6,3,2014)), '3','5eb8862969ddedadffdefada0f1e7203','CNY');
+		echo $result."\n";
+		$result=$this->Pending_model->AddRecord(1,'001010',40,60,date('Y-m-d H:i:s', mktime(14,42,59,6,3,2014)), '1','55555555','CNY');
+		echo $result."\n";
 	}
 
 	/*@author KHC	@version 1.0	
@@ -239,7 +251,7 @@ class Pending extends CI_Controller {
 	 * @return 根据订单号删除订单，返回执行结果的布尔量*/
 	public function DeleteRecord()
 	{
-		$this->Pending_model->DeleteRecord('aec66045f7b0e9261286b9ffc7a900b3');
+		$this->Pending_model->DeleteRecord('e033b21e7bcce75ce9a768f747c8d920');
 
 	}
 

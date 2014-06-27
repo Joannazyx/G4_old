@@ -6,6 +6,7 @@ class Pending_model extends CI_Model {
 	{
 		parent::__construct();
 		$this->load->model('Funds_Account');
+		$this->load->model('StockTrade');
 		$this->load->database();
 	}
 
@@ -107,12 +108,19 @@ class Pending_model extends CI_Model {
 			//////			
 			$data['CommissionType'] = 'BUY';
 
-			if($freeze === true)
+			if($freeze === true) {
+				$this->StockTrade->stockTrade($commissionID,$stockholderID,$stockID,$commission_amount,1);
 				$state = $this->add_buy_pending($data);
+			}
 		} else {
 			//若为卖出指令冻结股票账户
+			$state = false;
+			$freeze = $this->StockTrade->stockTrade($commissionID,$stockholderID,$stockID,$commission_amount,0);
+			/////////
 			$data['CommissionType'] = 'SELL';
-			$state = $this->add_sell_pending($data);
+			if($freeze === true)
+				//tongzhi
+				$state = $this->add_sell_pending($data);
 		}
 		//writelog
 
@@ -219,16 +227,28 @@ class Pending_model extends CI_Model {
 	public function DeleteRecord($commissionID)
 	{
 		$type = $this->get_type($commissionID);
+		$state = false;
 		if($type === 0) {
 			//若为撤销买入指令解冻资金账户；
-			
-			$state = false;
-			$unfreeze = $this->Funds_Account->central_unfreeze($commissionID);
-			if($unfreeze === true)   
-				$state = $this->withdraw_buy_pending($commissionID);
+			$query = $this->db->get_where('pending_buy_table', array('CommissionID' => $commissionID));
+
+			foreach ($query->result_array() as $row) {
+				$unfreeze = $this->Funds_Account->central_unfreeze($commissionID);
+				if($unfreeze === true) {  
+					$this->StockTrade->stockTradeReverse($commissionID,$row['StockHolderID'],$row['StockID'],$row['CommissionAmount'],1);
+					$state = $this->withdraw_buy_pending($commissionID);
+				}
+			}
 		} else {
 			//若为撤销卖出指令解冻股票账户；
-			$state = $this->withdraw_sell_pending($commissionID);
+			$query = $this->db->get_where('pending_sell_table', array('CommissionID' => $commissionID));
+			foreach ($query->result_array() as $row) {
+				$freeze = $this->StockTrade->stockTradeReverse($commissionID,$row['StockHolderID'],$row['StockID'],$row['CommissionAmount'],0);
+				if($freeze == true) {
+				//tongzhi
+					$state = $this->withdraw_sell_pending($commissionID);
+				}
+			}
 		}
 
 		return $state;
@@ -338,7 +358,8 @@ class Pending_model extends CI_Model {
 		$logstr = '';
 		$query = $this->db->get('pending_buy_table');
 		foreach ($query->result_array() as $row) {
-			$this->Funds_Account->central_unfreeze($row['CommissionID']);	
+			$this->Funds_Account->central_unfreeze($row['CommissionID']);
+			$this->StockTrade->stockTradeReverse($row['CommissionID'],$row['StockHolderID'],$row['StockID'],$row['CommissionAmount'],1);	
 			$this->db->insert('withdraw_request_table',$row);
 			$logstr = $logstr."Time: ".date("M-d-Y h:i:s",mktime()).
 					" State: ".'SHUTDOWN'.					
@@ -347,6 +368,8 @@ class Pending_model extends CI_Model {
 		$this->db->empty_table('pending_buy_table'); 
 		$query = $this->db->get('pending_sell_table');
 		foreach ($query->result_array() as $row) {
+			$this->StockTrade->stockTradeReverse($row['CommissionID'],$row['StockHolderID'],$row['StockID'],$row['CommissionAmount'],0);
+			//tongzhi
 			$this->db->insert('withdraw_request_table',$row);
 			$logstr =  $logstr."state: ".'SHUTDOWN'.
 				          " time: ".mktime().

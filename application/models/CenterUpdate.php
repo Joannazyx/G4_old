@@ -5,8 +5,8 @@ class Centerupdate extends CI_Model
 	public function __construct() 
 	{
 		parent::__construct();
-		$this->load->model('Zj_model', 'Funds_Account');//ZJ 
-		$this->load->model('Zq_model', 'Stock_Account');//ZQ
+		$this->load->model('Funds_Account', 'Funds_Account');//ZJ 
+		$this->load->model('StockTrade', 	'Stock_Account');//ZQ
 		$this->load->database();
 	}
 
@@ -25,6 +25,13 @@ class Centerupdate extends CI_Model
 	*	@param $currency 					币种
 	*	@param $seller $buyer 				买卖双方
 	*	@param $seller_isall $buyer_isall   买卖双方是否全部交易
+	//for write log
+	*   @param $sell_price                  卖方委托价
+	*   @param $buy_price				 	买方委托价
+	*   @param $sell_time					卖方委托时间
+	*   @param $buy_time					买方委托时间
+	*   @param $seller_remain				卖方交易后剩余资金
+	*   @param $buyer_remian				买方交易后剩余资金
 	*/
 	public function updateacc(	$seller_ZJ_id, $buyer_ZJ_id,
 								$seller_ZQ_id, $buyer_ZQ_id,
@@ -37,43 +44,37 @@ class Centerupdate extends CI_Model
 								$sell_remain, $buy_remain)
 	{
 		$err = true;
-
-		//updata seller ZQ
-		$err = $this->Stock_Account->IfZQTradeSuccess($seller_ZQ_id, $seller, $deal_amount, $stock_id, $seller_isall);
+		//资金
+		//always true
+		$err = $this->Funds_Account->central_spend_money($buyer, $currency, $deal_amount * $deal_price);
 		if ($err != true)
 		{
-			$err = "卖方证券账户更新失败";
-			return $err;
-		}
-		//update buyer ZQ
-		$err = $this->Stock_Account->IfZQTradeSuccess($buyer_ZQ_id, $buyer, $deal_amount, $stock_id, $buyer_isall);
-		if ($err != true)
-		{
-			// rollback 1
-			$err = "买方证券账户更新失败";
-			return $err;
-		}
-		//update seller ZJ
-		$err = $this->Funds_Account->IfZJTradeSuccess($seller_ZJ_id, $deal_amount, $deal_price, $seller, $seller_isall);
-		if ($err != true)
-		{
-			//rollback 1,2
-			$err = "卖方资金账户更新失败";
-			return $err;
-		}
-		//update buyer ZJ
-		$err = $this->Funds_Account->IfZJTradeSuccess($buyer_ZJ_id, $deal_amount, $deal_price, $buyer, $buyer_isall);
-		if ($err != true)
-		{
-			// rollback 1, 2, 3
 			$err = "买方资金账户更新失败";
 			return $err;
 		}
+		//always true
+		$err = $this->Funds_Account->central_add_money($seller_ZJ_id, $currency, $deal_amount * $deal_price);
+		if ($err != true)
+		{
+			$err = "卖方资金账户更新失败";
+			return $err;
+		}
+		//always true
+		$this->Funds_Account->central_unfreeze($deal_id, $buyer_ZJ_id);
+
+		//证券账户
+		$ZQ_isall = $buyer_isall * 1 + $seller_isall * 2;
+		$err = $this->Stock_Account->stockTradeMatch($buyer,$buyer_ZQ_id, $seller, /*$seller_ZQ_id,*/ $stock_id, $deal_amount, $ZQ_isall);
+		if ($err != true)
+		{
+			$err = "资金账户更新失败";
+			return $err;
+		}
+
 		//write log
 		$err = $this->writedeal($deal_id, $stock_id, $deal_time, $deal_price, $deal_amount, $currency, $seller, $buyer);
 		if ($err != true)
 		{
-			//rollback 1, 2, 3, 4
 			$err = "更新数据库失败";
 			return $err;
 		}
@@ -88,12 +89,16 @@ class Centerupdate extends CI_Model
 							   $currency);
 		if ($err != true)
 		{
-			//rollback 1, 2, 3, 4
 			$err = "更新日志失败";
 			return $err;
 		}		
+
 		return true;
 	}
+
+
+
+	//private 
 
 	/*
 	*	写数据库，包括
@@ -175,7 +180,8 @@ class Centerupdate extends CI_Model
 	*   @param $buy_price				 	买方委托价
 	*   @param $sell_time					卖方委托时间
 	*   @param $buy_time					买方委托时间
-	
+	*   @param $seller_remain				卖方交易后剩余资金
+	*   @param $buyer_remian				买方交易后剩余资金
 	*/
 	public function writelog($stock_id, 
 							 $sell_Commission_ID, $buy_Commission_ID,
@@ -263,39 +269,6 @@ class Centerupdate extends CI_Model
 		}
 		return true;
 	}
-
-
-
-	/*
-
-	data_of_the_day
-	+--------------+------------+------+-----+---------+-------+
-	| Field        | Type       | Null | Key | Default | Extra |
-	+--------------+------------+------+-----+---------+-------+
-	| StockID      | varchar(6) | NO   |     | NULL    |       |
-	| StartPrice   | double     | NO   |     | NULL    |       |
-	| EndPrice     | double     | NO   |     | NULL    |       |
-	| HighestPrice | double     | NO   |     | NULL    |       |
-	| LowestPrice  | double     | NO   |     | NULL    |       |
-	| DayAmount    | bigint(20) | NO   |     | NULL    |       |
-	| DayValue     | double     | NO   |     | NULL    |       |
-	+--------------+------------+------+-----+---------+-------+
-
-	*/
-
-	/*
-	写入账户 deal_of_the_day
-	 Field              | Type        | Null | Key | Default           | Extra |
-	--------------------+-------------+------+-----+-------------------+-------+
-	 DealID             | varchar(20) | NO   |     | NULL              |       |
-	 StockID            | varchar(6)  | NO   |     | NULL              |       |
-	 DealTime           | timestamp   | NO   |     | CURRENT_TIMESTAMP |       |
-	 DealPrice          | double      | NO   |     | NULL              |       |
-	 DealAmount         | int(11)     | NO   |     | NULL              |       |
-	 SellerCommissionID | varchar(20) | NO   |     | NULL              |       |
-	 BuyerCommisonID    | varchar(20) | NO   |     | NULL              |       |
-	 
-	*/
 }
 
 ?>
